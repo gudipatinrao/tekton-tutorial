@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: tekton-ws-pr-
+spec:
+  pipelineRef:
+    name: build-and-deploy-pipeline
+  params:
+    - name: gitLibUrl
+      value: https://github.com/gudipatinrao/service.git
+    - name: gitAppUrl
+      value: https://github.com/gudipatinrao/Application.git
+    - name: gitRevision
+      value: main
+    - name: GOALS	
+      value: ["-DskipTests","clean","install"]
+    - name: pathToYamlFile
+      value: "kubernetes/application.yaml"
+    - name: imageUrl
+      value: us.icr.io/narasimha_ns/springbootapp
+    - name: imageTag
+      value: "1.0"
+  serviceAccountName: pipeline
+  workspaces:
+    - name: git-source
+      persistentVolumeClaim:
+        claimName: tekton-ws-pvc

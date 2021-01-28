@@ -1,0 +1,115 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-and-deploy-pipeline
+spec:
+  workspaces:
+    - name: git-source
+      description: The git repo
+  params:
+    - name: gitLibUrl
+      description: Git Service repository url
+    - name: gitAppUrl
+      description: Git App repository url
+    - name: gitRevision
+      description: Git revision to check out
+      default: main
+    - name: pathToContext
+      description: The path to the build context, used by Buildah - within the workspace
+      default: .
+    - name: pathToYamlFile
+      description: The path to the yaml file to deploy within the git source
+    - name: imageUrl
+      description: Image name including repository
+    - name: imageTag
+      description: Image tag
+      default: "latest"
+  tasks:
+    - name: clone-lib-repo
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: git-source
+      params:
+        - name: url
+          value: "$(params.gitLibUrl)"
+        - name: revision
+          value: "$(params.gitRevision)"
+        - name: subdirectory
+          value: "libsrc"
+        - name: deleteExisting
+          value: "true"
+    - name: build-lib
+      taskRef:
+        name: maven
+      runAfter:
+        - clone-lib-repo
+      params:
+      - name: GOALS
+        value: ["-DskipTests","clean","install"]
+      - name: CONTEXT_DIR
+        value: "libsrc"	
+      workspaces:
+      - name: source
+        workspace: git-source
+    - name: clone-app-repo
+      taskRef:
+        name: git-clone
+      runAfter:
+        - build-lib
+      workspaces:
+        - name: output
+          workspace: git-source
+      params:
+        - name: url
+          value: "$(params.gitAppUrl)"
+        - name: revision
+          value: "$(params.gitRevision)"
+        - name: subdirectory
+          value: "appsrc"
+        - name: deleteExisting
+          value: "true"
+    - name: build-app
+      taskRef:
+        name: maven
+      runAfter:
+        - clone-app-repo
+      params:
+      - name: GOALS
+        value: ["-DskipTests","clean","install"]
+      - name: CONTEXT_DIR
+        value: "appsrc"
+      workspaces:
+      - name: source
+        workspace: git-source
+    - name: source-to-image
+      taskRef:
+        name: buildah
+      runAfter:
+        - build-app
+      workspaces:
+        - name: source
+          workspace: git-source
+      params:
+        - name: CONTEXT
+          value: "appsrc"
+        - name: IMAGE
+          value: $(params.imageUrl):$(params.imageTag)
+    - name: deploy-to-cluster
+      taskRef:
+        name: deploy-using-kubectl
+      workspaces:
+        - name: git-source
+          workspace: git-source
+      params:
+        - name: CONTEXT
+          value: "appsrc"
+        - name: pathToYamlFile
+          value: $(params.pathToYamlFile)
+        - name: imageUrl
+          value: $(params.imageUrl)
+        - name: imageTag
+          value: $(params.imageTag)
+        - name: imageDigest
+          value: $(tasks.source-to-image.results.IMAGE-DIGEST)
