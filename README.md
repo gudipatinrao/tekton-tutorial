@@ -21,7 +21,7 @@ create a simple pipeline that:
 * Builds a Docker image from source files and pushes it to your private container registry
 * Deploys the image to your openshift cluster
 * The example we are using first builds and installs a dependency library to the local repo and then it builds the application which needed the library
-
+![PipelineRun.png](tekton/images/PipelineRun.png)
 Clone the repository:
 You should clone this project to your workstation
 
