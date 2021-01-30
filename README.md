@@ -1,5 +1,13 @@
-Execute Tekton-Pipeline with Workspaces on Openshift:
+**Execute Tekton-Pipeline with Workspaces on Openshift:**
 
+Tekton is a flexible, Kubernetes-native, open-source CI/CD framework that enables automating deployments  
+across multiple platforms (Kubernetes, serverless, VMs, etc) by abstracting away the underlying details.
+
+Prerequisites:
+
+You need an OpenShift 4 cluster ,Tekton CLI (tkn)
+
+Concepts:
 
 Tekton provides a set of extensions to Kubernetes, in the form of Custom Resources, for defining pipelines.
 ￼￼
@@ -12,13 +20,15 @@ The resources are used as follows:
 ![Pipline.png](tekton/images/Pipline.png)
 
 * A Task defines a set of build steps, such as compiling code, running tests, and building and deploying images.
-
+* TaskRun: the execution and result of running an instance of task
 
 
 Tekton Worspaces provide a way for sharing the dependency jar files between Task runs.
 Also Tekton workspaces can speed up the build phase as the dependencies are cached on the Workspace.
 
-create a simple pipeline that:
+![pipVSpiprun.png](tekton/images/pipVSpiprun.png)
+
+Create a simple pipeline that:
 * Builds a Docker image from source files and pushes it to your private container registry
 * Deploys the image to your openshift cluster
 * The example we are using first builds and installs a dependency library to the local repo and then it builds the application which needed the library
@@ -40,7 +50,7 @@ The lib and app are cloned to libsrc,appsrc subdirectories respectively
 
 Now apply the file to your cluster to create the Task:
 
-Oc apply -f  git-clone.yaml
+    Oc apply -f  git-clone.yaml
 
 2)Next step is to build the libray and application which are cloned to the Workspace.
 
@@ -58,7 +68,7 @@ This Task declares a result named IMAGE-DIGEST which it sets to the digest of th
 
 Now apply the file to your cluster to create the Task:
 
-Oc apply -f buildah.yaml
+    Oc apply -f buildah.yaml
 
 4)Create a Task to deploy an image to a Openshift cluster
 The final function that the pipeline needs is a Task that deploys a Docker image to a Openshift cluster.
@@ -69,7 +79,7 @@ This Task has two steps.
 
 Now apply the file to your cluster to create the Task:
 
-Oc apply -f tekton/tasks/deploy-using-kubectl.yaml
+    Oc apply -f tekton/tasks/deploy-using-kubectl.yaml
 
 5)Create a pipeline:
 
@@ -77,7 +87,7 @@ pipeline resource contains a list of Tasks to run. here they are clone-repo, sou
 
 Now apply the file to your cluster to create the pipeline:
 
-oc apply -f tekton/pipeline/build-and-deploy-pipeline.yaml
+    oc apply -f tekton/pipeline/build-and-deploy-pipeline.yaml
 
 6)Define a ServiceAccount:
 The OpenShift Pipelines Operator adds and configures a Serviceaccount named pipeline that has sufficient permissions to build and push an image. This ServiceAccount is used by pipelineruns.
@@ -91,16 +101,16 @@ First, you need to enable programmatic access to your private container registry
 After you have the API key, you can create the following secret:
 
 
-oc create secret docker-registry icr-registry --docker-server=us.icr.io --docker-username=iamapikey --docker-password=<apikey>
+    oc create secret docker-registry icr-registry --docker-server=us.icr.io --docker-username=iamapikey --docker-password=<apikey>
 
 Here the docker server is the domain name of the registry you can find out the domain name of your registry using the command ibmcloud cr region
 
 Link the secrets to the Service account pipeline
 
-oc secret link default icr-registry
-oc secret link default icr-registry --for=pull
-oc secret link pipeline icr-registry
-oc secret link pipeline icr-registry --for=pull
+    oc secret link default icr-registry
+    oc secret link default icr-registry --for=pull
+    oc secret link pipeline icr-registry
+    oc secret link pipeline icr-registry --for=pull
 
 
 
@@ -108,7 +118,7 @@ oc secret link pipeline icr-registry --for=pull
 
 Before you run the pipeline for the first time, you must create the persistent volume claim for the workspace:
 
-oc create -f tekton/tekton-ws-pvc.yaml
+    oc create -f tekton/tekton-ws-pvc.yaml
 
 The persistent volume claim requests Kubernetes to obtain a storage volume. Since each PipelineRun references the same claim and thus the same volume, the PipelineRun can only be run consecutively to avoid conflicting use of the volume
 
@@ -116,16 +126,17 @@ Before continuing, check to see that the persistent volume claim is bound:
 
 Run the pipeline:
 
-Oc create -f tekton/run/tekton-ws-pipeline-run.yaml
+    Oc create -f tekton/run/tekton-ws-pipeline-run.yaml
 
 8)We can view the contents of the PVC using the utility inside tasks
 
-oc create -f tekton/tasks/listpvc.yaml
+    oc create -f tekton/tasks/listpvc.yaml
 
 this creates a deployment that uses above PVC to mount it as a volume into /tmp/persistent:
 
 Now we want to test if data in the volume actually persists. For this we find the pod managed by above deployment, exec into its main container and create a file called data in the /tmp/persistent directory (where we decided to mount the PV):
 
-oc get po
+    oc get po
 
 kubectl exec -it pv-deploy-69959dccb5-xxxx -- bash
+
