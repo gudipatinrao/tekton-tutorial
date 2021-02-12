@@ -25,6 +25,8 @@ The resources are used as follows:
 
 Tekton Worspaces provide a way for sharing the dependency jar files between Task runs.
 Also Tekton workspaces can speed up the build phase as the dependencies are cached on the Workspace.
+(See Tekton Hub for a catalog of premade resources).  
+This pipeline demonstrates the use of shared Tekton Workspaces as well as Task Results, features released in Tekton beta.
 
 ![pipVSpiprun.png](tekton/images/pipVSpiprun.png)
 
