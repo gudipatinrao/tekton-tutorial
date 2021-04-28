@@ -58,6 +58,8 @@ Now apply the file to your cluster to create the Task:
 
 we are using a maven task for accomplishing this , we provide the workspaces.source.path as the localrepo for maven task to install the
 built artifacts to local repo
+ 
+oc apply -f maven.yaml
 
 3)Next step is to create a Task to build an image and push it to a container registry
 
